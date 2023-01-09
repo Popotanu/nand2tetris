@@ -42,5 +42,28 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
-   // Put you code here:
+    // zx, nxに応じてx[16]を変換する
+    Mux16(a=x, b=false, sel=zx,out=ozx);
+    Not16(in=ozx, out=nozx);
+    Mux16(a=ozx, b=nozx, sel=nx, out=xx);
+
+    // zy, nyに応じてy[16]を変換する
+    Mux16(a=y, b=false, sel=zy,out=ozy);
+    Not16(in=ozy, out=nozy);
+    Mux16(a=ozy, b=nozy, sel=ny, out=yy);
+
+    // fの値に応じてxとyについて二項演算をする
+    Add16(a=xx, b=yy, out=addxy);
+    And16(a=xx, b=yy, out=andxy);
+    Mux16(a=andxy, b=addxy, sel=f, out=fxy);
+
+    Not16(in=fxy, out=nfxy);
+    Mux16(a=fxy, b=nfxy, sel=no, out=out, out[0..7]=out1, out[8..15]=out2, out[15]=out15);
+    Or8Way(in=out1, out=or1);
+    Or8Way(in=out2, out=or2);
+    Or(a=or1, b=or2, out=oror);
+    Not(in=oror, out=zr);
+
+    And(a=out15, b=true, out=ng);
 }
+
