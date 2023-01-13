@@ -26,6 +26,16 @@ CHIP Memory {
     IN in[16], load, address[15];
     OUT out[16];
 
+    // 0..16383:     RAM
+    // 16384..24575: スクリーン
+    // 24576:        キーボード
+    // 24577..:      無効
     PARTS:
-    // Put your code here:
+    DMux(in=load,sel=address[14], a=a,b=b);
+    RAM16K(in=in, load=a, address=address[0..13], out=ram);
+    DMux(in=b, sel=address[13], a=c,b=d);
+    Screen(in=in,load=c, address=address[0..12], out=sc);
+    Keyboard(out=kb);
+    Mux16(a=sc,b=kb,sel=address[13], out=mu);
+    Mux16(a=ram,b=mu,sel=address[14],out=out);
 }
