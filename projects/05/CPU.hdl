@@ -39,5 +39,60 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    // instructionの各bitに名前つける
+    // C命令(i=1)のとき,instructionの各bitは↓のように解釈できる
+    // i__a cccc ccdd djjj
+    And16(a=instruction, b=true, 
+          out[0]=j3, out[1]=j2, out[2]=j1,
+          out[3]=d3, out[4]=d2, out[5]=d1,
+          out[6]=c6, out[7]=c5, out[8]=c4,
+          out[9]=c3, out[10]=c2, out[11]=c1,
+          out[12]=a, out[15]=i);
+
+    And(a=i, b=d1, out=id1);
+    Mux16(a=instruction, b=alu, sel=id1, out=mux1);
+
+    // addressMはここで出力
+    Not(in=i, out=noti);
+    Or(a=noti, b=d1, out=loadAreg);
+    ARegister(in=mux1, load=loadAreg, out=areg, out[0..14]=addressM);
+
+    And(a=i, b=d2, out=loadDreg);
+    DRegister(in=alu, load=loadDreg, out=dreg);
+
+    And(a=a, b=i, out=ai);
+    Mux16(a=areg, b=inM, sel=ai, out=mux2);
+
+    // DResgister=x, ARegister/inM=y,
+    // c1...c6を各制御ビットとして演算をする.
+    // outMはここで出力
+    ALU(x=dreg, y=mux2,
+        zx=c1, nx=c2, zy=c3, ny=c4, f=c5, no=c6,
+        out=alu, out=outM, zr=zr, ng=ng);
+
+    // writeMはここで出力
+    And(a=i, b=d3, out=writeM);
+
+    // jump判定
+    // jump if j<0
+    And(a=j1, b=ng, out=jing);
+    And(a=jing, b=i, out=jng);
+
+    // jump if j=0
+    And(a=j2, b=zr, out=j2zr);
+    And(a=j2zr, b=i, out=jzr);
+
+    // jump if j>0
+    Or(a=ng, b=zr, out=ngzr);
+    Not(in=ngzr, out=plus);
+    And(a=plus, b=j3, out=plusj3);
+    And(a=plusj3, b=i, out=jpl);
+
+    // ↑のjump条件を1つでも満たしていれば1
+    Or(a=jng, b=jzr, out=j);
+    Or(a=j,b=jpl, out=jump);
+
+    // jumpしないなら制御ビットincを1にする
+    Not(in=jump, out=inc);
+    PC(in=areg, load=jump, inc=inc, reset=reset, out[0..14]=pc);
 }
