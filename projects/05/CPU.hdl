@@ -43,12 +43,12 @@ CHIP CPU {
     // C命令(i=1)のとき,instructionの各bitは↓のように解釈できる
     // i__a cccc ccdd djjj
     And16(a=instruction, b=true, 
-          out[0]=j3, out[1]=j2, out[2]=j1,
-          out[3]=d3, out[4]=d2, out[5]=d1,
-          out[6]=c6, out[7]=c5, out[8]=c4,
-          out[9]=c3, out[10]=c2, out[11]=c1,
-          out[12]=a, out[15]=i);
+          out[0]=j3, out[1]=j2, out[2]=j1, out[3]=d3, out[4]=d2, out[5]=d1, out[6]=c6, out[7]=c5,
+          out[8]=c4, out[9]=c3, out[10]=c2, out[11]=c1, out[12]=a,                     out[15]=i);
 
+    // d1の値によってARegisterに送る値を決める.
+    // insctuction or alu
+    // A命令のときは常にinstructionの値が送られる
     And(a=i, b=d1, out=id1);
     Mux16(a=instruction, b=alu, sel=id1, out=mux1);
 
@@ -60,6 +60,8 @@ CHIP CPU {
     And(a=i, b=d2, out=loadDreg);
     DRegister(in=alu, load=loadDreg, out=dreg);
 
+    // aの値によってALUに送る値を決める
+    // ARegister or inM
     And(a=a, b=i, out=ai);
     Mux16(a=areg, b=inM, sel=ai, out=mux2);
 
@@ -75,24 +77,22 @@ CHIP CPU {
 
     // jump判定
     // jump if j<0
-    And(a=j1, b=ng, out=jing);
-    And(a=jing, b=i, out=jng);
+    And(a=j1, b=ng, out=jng);
 
     // jump if j=0
-    And(a=j2, b=zr, out=j2zr);
-    And(a=j2zr, b=i, out=jzr);
+    And(a=j2, b=zr, out=jzr);
 
     // jump if j>0
     Or(a=ng, b=zr, out=ngzr);
     Not(in=ngzr, out=plus);
-    And(a=plus, b=j3, out=plusj3);
-    And(a=plusj3, b=i, out=jpl);
+    And(a=plus, b=j3, out=jpl);
 
-    // ↑のjump条件を1つでも満たしていれば1
+    // 次の2条件をどちらも満たせばjumpする
+    // - ↑のjump条件を1つでも満たしている
+    // - C命令である
     Or(a=jng, b=jzr, out=j);
-    Or(a=j,b=jpl, out=jump);
+    Or(a=j,b=jpl, out=ju);
+    And(a=ju, b=i, out=jump);
 
-    // jumpしないなら制御ビットincを1にする
-    Not(in=jump, out=inc);
-    PC(in=areg, load=jump, inc=inc, reset=reset, out[0..14]=pc);
+    PC(in=areg, load=jump, inc=true, reset=reset, out[0..14]=pc);
 }
